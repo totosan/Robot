@@ -63,6 +63,7 @@ class VideoCapture(object):
         self.url = ""
         self.detectionSampleRate = detectionSampleRate
         self.imageProcessingEndpoint = imageProcessingEndpoint
+        self.Mouse = None
 
         print("VideoCapture::__init__()")
         print("OpenCV Version : %s" % (cv2.__version__))
@@ -246,6 +247,10 @@ class VideoCapture(object):
             if not self.captureInProgress:
                 time.sleep(1.0)
 
+    def getColorOnMousePosition(self,frame, mouseEventData):
+        pixel = frame[mouseEventData['x'],mouseEventData['y']]
+        print(pixel)
+
     def __Run__(self):
 
         print("===============================================================")
@@ -348,6 +353,9 @@ class VideoCapture(object):
             # Run Object Detection -- GUARD
             #if self.inference:
                 #yoloDetections = self.yoloInference.runInference(frame, frameW, frameH, self.confidenceLevel)
+
+            if self.Mouse and self.Mouse['type'] == 'click':
+                self.getColorOnMousePosition(frame, self.Mouse)
 
             # Calculate FPS
             timeElapsedInMs = (time.time() - tFrameStart) * 1000

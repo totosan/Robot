@@ -6,12 +6,14 @@ import tornado.websocket
 import threading
 import base64
 import os
+import json 
 
 class ImageStreamHandler(tornado.websocket.WebSocketHandler):
 
     def initialize(self, videoCapture):
         self.clients = []
         self.videoCapture = videoCapture
+        self.mouseEventData = None
 
     def check_origin(self, origin):
         return True
@@ -26,6 +28,9 @@ class ImageStreamHandler(tornado.websocket.WebSocketHandler):
             if frame != None:
                 encoded = base64.b64encode(frame)
                 self.write_message(encoded, binary=False)
+        else:
+            self.mouseEventData = json.loads(msg)
+            self.videoCapture.Mouse = self.mouseEventData
 
     def on_close(self):
         self.clients.remove(self)
