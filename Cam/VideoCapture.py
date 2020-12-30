@@ -27,8 +27,11 @@ from ImageServer import ImageServer
 import VideoStream
 from VideoStream import VideoStream
 
+# FEATURES here
+featureORB = False
 
-# custom imports
+
+
 
 class VideoCapture(object):
 
@@ -64,6 +67,10 @@ class VideoCapture(object):
         self.detectionSampleRate = detectionSampleRate
         self.imageProcessingEndpoint = imageProcessingEndpoint
         self.Mouse = None
+        self.Drawer = []
+        self.ORB = cv2.ORB_create()
+
+        self.refImage = cv2.imread('CGI_wellnuss.jpg',0)
 
         print("VideoCapture::__init__()")
         print("OpenCV Version : %s" % (cv2.__version__))
@@ -248,8 +255,19 @@ class VideoCapture(object):
                 time.sleep(1.0)
 
     def getColorOnMousePosition(self,frame, mouseEventData):
-        pixel = frame[mouseEventData['x'],mouseEventData['y']]
-        print(pixel)
+        (x,y) = (mouseEventData['x'],mouseEventData['y'])
+        pixel = frame[y,x]
+        print(f'px:{pixel} pos:{(x,y)}')
+        self.Drawer.append((x,y,pixel))
+
+    def GetCorrespondingFeatures(self, frame):
+        kpRef, destRef = self.ORB.detectAndCompute(self.refImage,None)
+        kpTarget, desTarget = self.ORB.detectAndCompute(frame, None)
+        #frame=cv2.drawKeypoints(frame, kp, None, color=(0,255,0), flags=0)
+        bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+        matches = bf.match(destRef, desTarget)
+        matches = sorted(matches, key = lambda x:x.distance)
+        return cv2.drawMatches(self.refImage,kpRef,frame,kpTarget,matches[:10],None, flags=2)
 
     def __Run__(self):
 
@@ -354,8 +372,19 @@ class VideoCapture(object):
             #if self.inference:
                 #yoloDetections = self.yoloInference.runInference(frame, frameW, frameH, self.confidenceLevel)
 
+            ########
+            # Do all teh extra stuff here
+            ########
+            global featureORB
+            if featureORB == True:
+                frame = self.GetCorrespondingFeatures(frame)
+
+
             if self.Mouse and self.Mouse['type'] == 'click':
                 self.getColorOnMousePosition(frame, self.Mouse)
+                self.Mouse = None
+            for click in self.Drawer:
+                cv2.circle(frame,(click[0],click[1]),10,(int(click[2][0]),int(click[2][1]),int(click[2][2])),-1)
 
             # Calculate FPS
             timeElapsedInMs = (time.time() - tFrameStart) * 1000
