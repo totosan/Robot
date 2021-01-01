@@ -34,8 +34,8 @@ def main(
         videoPath ="",
         verbose = False,
         noIotHub = False,
-        videoWidth = 0,
-        videoHeight = 0,
+        videoWidth = 160,
+        videoHeight = 120,
         fontScale = 1.0,
         imageProcessingEndpoint="",
         ):
