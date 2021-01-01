@@ -279,12 +279,12 @@ class VideoCapture(object):
 	def setHsvRange(self,hsv):	
 		corridor = 10
 		hMin = (hsv[0]-corridor, 0)[hsv[0]-corridor <= 0]
-		sMin = (hsv[1]-corridor, 0)[hsv[1]-corridor <= 0]
-		vMin = (hsv[2]-corridor, 0)[hsv[2]-corridor <= 0]
+		sMin = (hsv[1]-corridor*2, 0)[hsv[1]-corridor*2 <= 0]
+		vMin = (hsv[2]-corridor*3, 0)[hsv[2]-corridor*3 <= 0]
 
 		hMax = (hsv[0]+corridor, 179)[hsv[0]+corridor > 179]
-		sMax = (hsv[1]+corridor, 255)[hsv[1]+corridor > 255]
-		vMax = (hsv[2]+corridor, 255)[hsv[2]+corridor > 255]
+		sMax = 255
+		vMax = 255
 
 		hsvMin = (hMin, sMin, vMin)
 		hsvMax = (hMax, sMax, vMax)
@@ -448,7 +448,7 @@ class VideoCapture(object):
 				   x = moments['m10'] / moments['m00']
 				   y = moments['m01'] / moments['m00']
 				   cv2.circle(frame, (int(x), int(y)), 5, (0, 255, 0), -1)
-				#frame = cv2.bitwise_and(frame,frame, mask=imgThresh)
+				frame = cv2.bitwise_and(frame,frame, mask=imgThresh)
 
 			# Calculate FPS
 			timeElapsedInMs = (time.time() - tFrameStart) * 1000
