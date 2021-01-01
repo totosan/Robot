@@ -28,7 +28,7 @@ import VideoStream
 from VideoStream import VideoStream
 
 # FEATURES here
-featureORB = False
+featureORB = True
 
 
 
@@ -70,7 +70,7 @@ class VideoCapture(object):
         self.Drawer = []
         self.ORB = cv2.ORB_create()
 
-        self.refImage = cv2.imread('CGI_wellnuss.jpg',0)
+        self.refImage = cv2.imread('BienenDominik.jpg',0)
 
         print("VideoCapture::__init__()")
         print("OpenCV Version : %s" % (cv2.__version__))
