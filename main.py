@@ -10,6 +10,10 @@ import json
 import argparse
 from netifaces import interfaces, ifaddresses, AF_INET
 
+from Cam.VideoCapture import VideoCapture
+from Cam.ImageServer import ImageServer
+from motor.MotorDriver import MotorDriver
+
 try:
     import ptvsd
     __myDebug__ = True 
@@ -17,9 +21,6 @@ try:
 except ImportError:
     __myDebug__ = False
     
-
-import VideoCapture
-from VideoCapture import VideoCapture
 
     
 def ip4_addresses():
@@ -37,26 +38,30 @@ def main(
         videoWidth = 160,
         videoHeight = 120,
         fontScale = 1.0,
-        imageProcessingEndpoint="",
+        imageProcessingEndpoint=""
         ):
 
     global videoCapture
 
+    motorDriver = MotorDriver(False)
     try:
         print("\nPython %s\n" % sys.version )
 
+        print(motorDriver.Message)
         with VideoCapture(videoPath, 
                          verbose,
                          videoWidth,
                          videoHeight,
                          fontScale,
-                         imageProcessingEndpoint) as videoCapture:
-
+                         imageProcessingEndpoint,
+                         motorController=motorDriver) as videoCapture:
+            videoCapture.Initialize(motorDriver)
             videoCapture.start()
 
     except KeyboardInterrupt:
         print("Camera capture module stopped" )
-
+    finally:
+        motorDriver.StopMotor()
 
 def __convertStringToBool(env):
     if env in ['True', 'TRUE', '1', 'y', 'YES', 'Y', 'Yes']:

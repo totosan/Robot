@@ -23,10 +23,8 @@ import urllib.request as urllib2
 
 
 # Vision imports
-import ImageServer
-from ImageServer import ImageServer
-import VideoStream
-from VideoStream import VideoStream
+from Cam.ImageServer import ImageServer
+from Cam.VideoStream import VideoStream
 
 
 class VideoCapture(object):
@@ -41,7 +39,8 @@ class VideoCapture(object):
 			inference=True,
 			confidenceLevel=0.5,
 			detectionSampleRate = 10,
-			imageProcessingEndpoint=""):
+			imageProcessingEndpoint="",
+			motorController=None):
 
 		self.config = self.GetConfig()
 		self.features = self.GetFeaturesFromConfig(self.config)
@@ -64,11 +63,14 @@ class VideoCapture(object):
 		self.url = ""
 		self.detectionSampleRate = detectionSampleRate
 		self.imageProcessingEndpoint = imageProcessingEndpoint
+		self.MotorController = motorController
+		
 		self.Mouse = None
 		self.Drawer = []
 		self.ORB = cv2.ORB_create()
 
-		self.refImage = cv2.imread('BienenDominik.jpg',0)
+		if 'orb' in self.features:
+			self.refImage = cv2.imread('Cam/BienenDominik.jpg',0)
 
 		print("VideoCapture::__init__()")
 		print("OpenCV Version : %s" % (cv2.__version__))
@@ -86,6 +88,8 @@ class VideoCapture(object):
 
 		self.imageServer = ImageServer(8000, self)
 		self.imageServer.start()
+	def Initialize(self, motor):
+		self.MotorController = motor
 
 	def GetConfig(self):
 		with open('config.json') as json_file:
@@ -304,6 +308,19 @@ class VideoCapture(object):
 		matches = sorted(matches, key = lambda x:x.distance)
 		return cv2.drawMatches(self.refImage,kpRef,frame,kpTarget,matches[:10],None, flags=2)
 
+	def driveRobot(self, area, x, y):
+		if area<=120:
+			self.MotorController.Forward()
+		elif area>=600:
+			self.MotorController.Backward()
+		else:
+			self.MotorController.StopMotor()
+
+		if x<160:
+			self.MotorController.TurnRight()
+		elif x>480:
+			self.MotorController.TurnLeft()
+
 	def __Run__(self):
 
 		print("===============================================================")
@@ -367,16 +384,8 @@ class VideoCapture(object):
 
 		signal.signal(signal.SIGALRM, self.videoStreamReadTimeoutHandler)
 
-		Hmin = 42
-		Hmax = 92
-		Smin = 62
-		Smax = 255
-		Vmin = 63
-		Vmax = 235
-
-		# Cria-se um array de valores HSV(mÃ­nimo e mÃ¡ximo)
-		rangeMin = np.array([Hmin, Smin, Vmin], np.uint8)
-		rangeMax = np.array([Hmax, Smax, Vmax], np.uint8)
+		rangeMin = np.array([])
+		rangeMax = np.array([])
 
 		# Ãrea mÃ­nima Ã¡ ser detectada
 		minArea = 50
@@ -436,19 +445,23 @@ class VideoCapture(object):
 					rangeMin, rangeMax = self.setHsvRange(lastDraw[3])
 					print(f'Range Min: {rangeMin} / Range Max: {rangeMax}')
 				for click in self.Drawer:
-					cv2.circle(frame,(click[0],click[1]),10,(0,200,20),-1)
+					cv2.circle(frame,(click[0],click[1]),3,(0,200,20),-1)
 
 			if 'binarizer' in self.features:
-				imgHSV = cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)	
-				print(f'Range Min: {rangeMin} / Range Max: {rangeMax}')
-				imgThresh = cv2.inRange(imgHSV, rangeMin, rangeMax)
-				imgErode = cv2.erode(imgThresh, None, iterations = 3)
-				moments = cv2.moments(imgErode, True)
-				if moments['m00'] >= minArea:
-				   x = moments['m10'] / moments['m00']
-				   y = moments['m01'] / moments['m00']
-				   cv2.circle(frame, (int(x), int(y)), 5, (0, 255, 0), -1)
-				frame = cv2.bitwise_and(frame,frame, mask=imgThresh)
+				if rangeMin.any() and rangeMax.any():
+					imgHSV = cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)	
+					
+					imgThresh = cv2.inRange(imgHSV, rangeMin, rangeMax)
+					imgErode = cv2.erode(imgThresh, None, iterations = 3)
+					moments = cv2.moments(imgErode, True)
+					if moments['m00'] >= minArea:
+						x = moments['m10'] / moments['m00']
+						y = moments['m01'] / moments['m00']
+						cv2.circle(frame, (int(x), int(y)), 5, (0, 255, 0), -1)
+						self.driveRobot(moments['m00'],int(x),int(y))
+					#frame = cv2.bitwise_and(frame,frame, mask=imgThresh)
+					frame = cv2.rectangle(frame, (0,0),(160,480),(0,255,0),1)
+					frame = cv2.rectangle(frame, (480,0),(640,480),(0,255,0),1)
 
 			# Calculate FPS
 			timeElapsedInMs = (time.time() - tFrameStart) * 1000
